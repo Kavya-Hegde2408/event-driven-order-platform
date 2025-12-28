@@ -43,4 +43,11 @@ public class Order {
     public Long getId() {
         return id;
     }
+    public void markCompleted() {
+        this.status = OrderStatus.COMPLETED;
+    }
+
+    public void markFailed() {
+        this.status = OrderStatus.FAILED;
+    }
 }
