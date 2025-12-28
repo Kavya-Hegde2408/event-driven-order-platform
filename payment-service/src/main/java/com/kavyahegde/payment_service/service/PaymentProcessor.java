@@ -1,6 +1,7 @@
 package com.kavyahegde.payment_service.service;
 
 import com.kavyahegde.payment_service.event.OrderCreatedEvent;
+import com.kavyahegde.payment_service.event.PaymentFailedEvent;
 import com.kavyahegde.payment_service.event.PaymentSuccessEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +29,13 @@ public class PaymentProcessor {
     )
     @KafkaListener(topics = "order-created")
     public void processPayment(OrderCreatedEvent event) {
+        System.out.println(">>> LISTENER INVOKED <<<");
 
         log.info("Processing payment for orderId={}", event.orderId());
 
 
-        if (event.totalAmount().intValue() % 2 == 0) {
+       // if (event.totalAmount().intValue() % 2 == 0) {
+        if (event.totalAmount().intValue() % 2  == 0) {
             log.info("Payment SUCCESS for orderId={}", event.orderId());
             kafkaTemplate.send(
                     "payment-success",
@@ -41,7 +44,12 @@ public class PaymentProcessor {
             );
         } else {
             log.error("Payment FAILED for orderId={}", event.orderId());
-            throw new RuntimeException("Payment failed");
+            kafkaTemplate.send(
+                    "payment-failed",
+                    event.orderId().toString(),
+                    new PaymentFailedEvent(event.orderId(), "Payment failed")
+            );
+
         }
     }
 }
