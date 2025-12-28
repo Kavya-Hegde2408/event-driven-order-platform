@@ -1,5 +1,6 @@
 package com.kavya_hegde.order_service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kavya_hegde.order_service.event.PaymentFailedEvent;
 import com.kavya_hegde.order_service.event.PaymentSuccessEvent;
 import com.kavya_hegde.order_service.model.Order;
@@ -11,18 +12,24 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class OrderEventListener {
+
     private static final Logger log =
             LoggerFactory.getLogger(OrderEventListener.class);
 
     private final OrderRepository orderRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OrderEventListener(OrderRepository orderRepository) {
         this.orderRepository = orderRepository;
     }
-    @KafkaListener(topics = "payment-success")
-    public void handlePaymentSuccess(PaymentSuccessEvent event) {
 
-        log.info("Received payment-success for orderId={}", event.orderId());
+    @KafkaListener(topics = "payment-success")
+    public void handlePaymentSuccess(String message) throws Exception {
+
+        log.info("Raw payment-success message: {}", message);
+
+        PaymentSuccessEvent event =
+                objectMapper.readValue(message, PaymentSuccessEvent.class);
 
         Order order = orderRepository.findById(event.orderId())
                 .orElseThrow(() -> new IllegalStateException("Order not found"));
@@ -32,9 +39,12 @@ public class OrderEventListener {
     }
 
     @KafkaListener(topics = "payment-failed")
-    public void handlePaymentFailed(PaymentFailedEvent event) {
+    public void handlePaymentFailed(String message) throws Exception {
 
-        log.info("Received payment-failed for orderId={}", event.orderId());
+        log.info("Raw payment-failed message: {}", message);
+
+        PaymentFailedEvent event =
+                objectMapper.readValue(message, PaymentFailedEvent.class);
 
         Order order = orderRepository.findById(event.orderId())
                 .orElseThrow(() -> new IllegalStateException("Order not found"));
@@ -42,5 +52,4 @@ public class OrderEventListener {
         order.markFailed();
         orderRepository.save(order);
     }
-
 }
