@@ -1,13 +1,11 @@
 package com.kavya_hegde.order_service.controller;
 
 import com.kavya_hegde.order_service.DTO.CreateOrderRequest;
+import com.kavya_hegde.order_service.DTO.OrderResponse;
 import com.kavya_hegde.order_service.model.Order;
 import com.kavya_hegde.order_service.service.OrderService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/orders")
@@ -29,4 +27,10 @@ public class OrderController {
 
         return ResponseEntity.ok(order);
     }
+
+    @GetMapping("/{id}")
+    public OrderResponse getOrder(@PathVariable Long id) {
+        return orderService.getOrder(id);
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.kavya_hegde.order_service.service;
 
+import com.kavya_hegde.order_service.DTO.OrderResponse;
 import com.kavya_hegde.order_service.event.OrderCreatedEvent;
 import com.kavya_hegde.order_service.model.Order;
 import com.kavya_hegde.order_service.repository.OrderRepository;
@@ -34,5 +35,16 @@ public class OrderService {
         kafkaTemplate.send(TOPIC, savedOrder.getId().toString(), event);
 
         return savedOrder;
+    }
+    public OrderResponse getOrder(Long id) {
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException("Order not found: " + id));
+
+        return new OrderResponse(
+                order.getId(),
+                order.getUserId(),
+                order.getTotalAmount()
+        );
     }
 }
