@@ -1,6 +1,9 @@
 package com.kavyahegde.api_gateway.filter;
 
 
+import brave.Tracer;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -10,8 +13,13 @@ import reactor.core.publisher.Mono;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 
+
+@Slf4j
 @Component
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
+
+    @Autowired
+    private Tracer tracer;
 
     public JwtAuthFilter() {
         super(Config.class);
@@ -21,6 +29,13 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
 
+            // ✅ TRACE LOG (THIS WILL NOW WORK)
+            log.info("Gateway handling request, traceId={}",
+                    tracer.currentSpan() != null
+                            ? tracer.currentSpan().context().traceId()
+                            : "NO-SPAN");
+
+            // ✅ JWT VALIDATION
             if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return unauthorized(exchange);
             }
@@ -51,4 +66,3 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     public static class Config {
     }
 }
-

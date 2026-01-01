@@ -37,3 +37,21 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.kavyahegde.loyalty_service.event.PaymentSuccessEvent
 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},traceId=%X{traceId},spanId=%X{spanId}]"

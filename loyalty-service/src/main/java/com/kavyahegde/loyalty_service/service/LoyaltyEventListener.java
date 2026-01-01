@@ -3,7 +3,10 @@ package com.kavyahegde.loyalty_service.service;
 import com.kavyahegde.loyalty_service.dto.OrderResponse;
 import com.kavyahegde.loyalty_service.event.PaymentSuccessEvent;
 import com.kavyahegde.loyalty_service.model.Loyalty;
+import com.kavyahegde.loyalty_service.model.ProcessedEvent;
 import com.kavyahegde.loyalty_service.repository.LoyaltyRepository;
+import com.kavyahegde.loyalty_service.repository.ProcessedEventRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -12,16 +15,28 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class LoyaltyEventListener {
 
     private final WebClient webClient;
-    private final LoyaltyRepository repository;
+    private final LoyaltyRepository loyaltyRepository;
+    private final ProcessedEventRepository processedEventRepository;
 
     public LoyaltyEventListener(WebClient webClient,
-                                LoyaltyRepository repository) {
+                                LoyaltyRepository loyaltyRepository,
+                                ProcessedEventRepository processedEventRepository) {
         this.webClient = webClient;
-        this.repository = repository;
+        this.loyaltyRepository = loyaltyRepository;
+        this.processedEventRepository = processedEventRepository;
     }
 
-    @KafkaListener(topics = "payment-success")
+    @KafkaListener(topics = "payment-success", groupId = "loyalty-service-group")
+    @Transactional
     public void onPaymentSuccess(PaymentSuccessEvent event) {
+
+        //Idempotency key
+        String eventId = "PAYMENT_SUCCESS_" + event.orderId();
+
+        //Ignore duplicate events
+        if (processedEventRepository.existsById(eventId)) {
+            return;
+        }
 
         OrderResponse order =
                 webClient.get()
@@ -33,11 +48,14 @@ public class LoyaltyEventListener {
 
         int points = order.totalAmount().intValue() / 100 * 10;
 
-        Loyalty loyalty = repository
+        Loyalty loyalty = loyaltyRepository
                 .findById(order.userId())
                 .orElse(new Loyalty(order.userId(), 0));
 
         loyalty.addPoints(points);
-        repository.save(loyalty);
+        loyaltyRepository.save(loyalty);
+
+        //Mark event as processed
+        processedEventRepository.save(new ProcessedEvent(eventId));
     }
 }
